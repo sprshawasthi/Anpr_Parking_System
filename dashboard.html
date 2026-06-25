@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SJVN Smart Parking System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-header">
+        <img src="sjvn-logo.png" alt="SJVN Logo" class="logo-img">
+        <div class="logo-text">
+            <span class="logo-title">SJVN PARKING</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <ul>
+            <li class="nav-item active" onclick="showPage('dashboard')">
+                <span class="nav-icon">⊞</span>
+                <span class="nav-label">Dashboard</span>
+            </li>
+            <li class="nav-item" onclick="showPage('records')">
+                <span class="nav-icon">🚗</span>
+                <span class="nav-label">Vehicle Records</span>
+            </li>
+            <li class="nav-item" onclick="showPage('analytics')">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Parking Analytics</span>
+            </li>
+            <li class="nav-item" onclick="showPage('reports')">
+                <span class="nav-icon">📄</span>
+                <span class="nav-label">Reports</span>
+            </li>
+            <li class="nav-item" onclick="showPage('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="system-status">
+            <span class="status-dot"></span>
+            <div>
+                <div class="status-label">System Status</div>
+                <div class="status-value" id="systemStatus">Online</div>
+            </div>
+        </div>
+        <div class="sidebar-clock">
+            <div id="sidebarTime" class="side-time"></div>
+            <div id="sidebarDate" class="side-date"></div>
+        </div>
+    </div>
+
+</aside>
+
+<!-- ===== MAIN ===== -->
+<main class="main-content">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <h1 class="page-title">SJVN Parking System</h1>
+        <div class="topbar-right">
+            <div class="notif-bell">
+                🔔
+                <span class="notif-badge" id="notifBadge">0</span>
+            </div>
+            <div class="admin-avatar">
+                <div class="avatar-circle">A</div>
+                <div class="admin-info">
+                    <span class="admin-name">Admin</span>
+                    <span class="admin-role">Administrator</span>
+                </div>
+                <span>▾</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div id="page-dashboard" class="page active">
+
+        <!-- STAT CARDS -->
+        <section class="stat-cards">
+
+            <div class="stat-card">
+                <div class="stat-icon icon-blue">P</div>
+                <div class="stat-body">
+                    <div class="stat-label">TOTAL CAPACITY</div>
+                    <div class="stat-value" id="totalCap">200</div>
+                    <div class="stat-sub">Parking Slots</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-red">🚗</div>
+                <div class="stat-body">
+                    <div class="stat-label">OCCUPIED</div>
+                    <div class="stat-value" id="occupiedSpaces">0</div>
+                    <div class="stat-sub red" id="occupiedPct">0.00% ↑</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-green">🚘</div>
+                <div class="stat-body">
+                    <div class="stat-label">AVAILABLE</div>
+                    <div class="stat-value" id="availableSpaces">200</div>
+                    <div class="stat-sub green" id="availablePct">100.00% ↑</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon icon-purple">⤢</div>
+                <div class="stat-body">
+                    <div class="stat-label">TODAY'S ENTRIES</div>
+                    <div class="stat-value" id="todayEntries">0</div>
+                    <div class="stat-sub link" onclick="showPage('records')">View all entries</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- MIDDLE ROW: Last Detected | Recent Detections -->
+        <section class="mid-row">
+
+            <div class="last-detected-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Last Detected</span>
+                </div>
+                <div class="last-detected-body">
+                    <div class="ld-label">Vehicle Number</div>
+                    <div class="ld-plate" id="ldPlate">—</div>
+                    <div class="ld-car-icon">🚗</div>
+                    <div class="ld-label">Time</div>
+                    <div class="ld-time" id="ldTime">—</div>
+                    <div class="ld-label">Status</div>
+                    <div class="ld-status" id="ldStatus">—</div>
+                </div>
+            </div>
+
+            <div class="recent-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Recent Detections</span>
+                    <span class="link" onclick="showPage('records')">View All</span>
+                </div>
+                <ul class="recent-list" id="recentList">
+                    <li class="recent-empty">No detections yet</li>
+                </ul>
+            </div>
+
+        </section>
+
+        <!-- CHARTS ROW -->
+        <section class="charts-row">
+
+            <div class="chart-panel">
+                <div class="panel-header"><span class="panel-title">Parking Occupancy</span></div>
+                <div class="donut-wrapper">
+                    <canvas id="occupancyChart"></canvas>
+                    <div class="donut-center" id="donutCenter">0%<br><small>Occupied</small></div>
+                </div>
+                <div class="donut-legend">
+                    <div><span class="dot blue"></span> Occupied <strong id="legOccupied">0 (0%)</strong></div>
+                    <div><span class="dot lightblue"></span> Available <strong id="legAvailable">200 (100%)</strong></div>
+                    <div style="margin-top:8px;font-size:12px;color:#666">Total Capacity: <strong id="legTotal">200</strong></div>
+                </div>
+            </div>
+
+            <div class="chart-panel wide">
+                <div class="panel-header"><span class="panel-title">Occupancy Trend (Today)</span></div>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+        </section>
+
+        <!-- BOTTOM ROW: Active + History -->
+        <section class="bottom-row">
+
+            <div class="table-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Active Vehicles (Currently Parked)</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Vehicle Number</th>
+                            <th>Entry Time</th>
+                            <th>Duration</th>
+                            <th>Vehicle Type</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeTable">
+                        <tr><td colspan="6" class="empty-row">No active vehicles</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Recent Parking History</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Vehicle Number</th>
+                            <th>Entry Time</th>
+                            <th>Exit Time</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr><td colspan="5" class="empty-row">No history yet</td></tr>
+                    </tbody>
+                </table>
+                <div class="table-footer" onclick="showPage('records')">View All History</div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- ===== VEHICLE RECORDS PAGE ===== -->
+    <div id="page-records" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Vehicle Records</h2>
+            <div class="records-tabs">
+                <button class="tab-btn active" onclick="switchTab('active-tab','tab-btn')">Active Vehicles</button>
+                <button class="tab-btn" onclick="switchTab('history-tab','tab-btn')">Parking History</button>
+            </div>
+            <div id="active-tab" class="tab-content active">
+                <div class="table-panel">
+                    <table>
+                        <thead><tr><th>#</th><th>Vehicle Number</th><th>Entry Time</th><th>Duration</th><th>Type</th></tr></thead>
+                        <tbody id="recordsActiveTable"><tr><td colspan="5" class="empty-row">No active vehicles</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="history-tab" class="tab-content">
+                <div class="table-panel">
+                    <table>
+                        <thead><tr><th>#</th><th>Vehicle Number</th><th>Entry Time</th><th>Exit Time</th><th>Duration</th></tr></thead>
+                        <tbody id="recordsHistoryTable"><tr><td colspan="5" class="empty-row">No history yet</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ANALYTICS PAGE ===== -->
+    <div id="page-analytics" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Parking Analytics</h2>
+            <div class="analytics-grid">
+                <div class="chart-panel wide">
+                    <div class="panel-header"><span class="panel-title">Occupancy Trend (Today)</span></div>
+                    <canvas id="trendChart2"></canvas>
+                </div>
+                <div class="chart-panel wide">
+                    <div class="panel-header"><span class="panel-title">Hourly Entry/Exit Pattern</span></div>
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== REPORTS PAGE ===== -->
+    <div id="page-reports" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Reports</h2>
+            <div class="reports-grid">
+                <div class="report-card" onclick="exportCSV()">
+                    <div class="report-icon">📥</div>
+                    <div class="report-title">Export Today's Data</div>
+                    <div class="report-sub">Download CSV of today's entries and exits</div>
+                </div>
+                <div class="report-card">
+                    <div class="report-icon">📊</div>
+                    <div class="report-title">Weekly Summary</div>
+                    <div class="report-sub">Coming soon</div>
+                </div>
+                <div class="report-card">
+                    <div class="report-icon">📋</div>
+                    <div class="report-title">Monthly Report</div>
+                    <div class="report-sub">Coming soon</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SETTINGS PAGE ===== -->
+    <div id="page-settings" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Settings</h2>
+            <div class="settings-card">
+                <h3>Parking Capacity</h3>
+                <div class="settings-row">
+                    <label>Total Slots</label>
+                    <input type="number" id="capacityInput" value="200" min="1">
+                    <button onclick="setCapacity()">Update</button>
+                </div>
+            </div>
+            <div class="settings-card danger-zone">
+                <h3>Reset Database</h3>
+                <p>Clears all active vehicles. History is preserved.</p>
+                <button class="btn-danger" onclick="confirmReset()">Reset Active Parking</button>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
