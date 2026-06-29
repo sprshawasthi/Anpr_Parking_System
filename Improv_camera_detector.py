@@ -138,11 +138,11 @@ is_accumulating = False
 accumulation_start_time = 0
 ACCUMULATION_WINDOW = 7.0
 
-print("🚗 ANPR System Started")
+print("🚗 ANPR System Started (Single Camera Mode)")
 print("Press ESC to stop.\n")
 
-
-# ===== MAIN LOOP =====
+previous_frame = None
+MOTION_THRESHOLD = 15000  
 
 while True:
     ret, frame = cap.read()
@@ -151,36 +151,49 @@ while True:
         print("❌ Failed to capture frame.")
         break
 
-    cv2.imwrite("/tmp/temp_frame.jpg", frame)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (21, 21), 0)
 
-    try:
-        results = alpr.predict("/tmp/temp_frame.jpg")
+    if previous_frame is None:
+        previous_frame = gray
+        continue
 
-        current_frame_plates = []
+    frame_delta = cv2.absdiff(previous_frame, gray)
+    thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+    motion_level = cv2.countNonZero(thresh)
+    previous_frame = gray
 
-        for result in results:
-            if result.ocr and result.ocr.text:
+    if motion_level > MOTION_THRESHOLD:
+        cv2.imwrite("/tmp/temp_frame.jpg", frame)
+
+        try:
+            results = alpr.predict("/tmp/temp_frame.jpg")
+            
+            current_frame_plates = []
+
+            for result in results:
+                if result.ocr and result.ocr.text:
                 
-                raw_text = result.ocr.text.strip().upper()
+                    raw_text = result.ocr.text.strip().upper()
                 
-                plate_text = re.sub(r'[^A-Z0-9]', '', raw_text)
+                    plate_text = re.sub(r'[^A-Z0-9]', '', raw_text)
                 
                 if plate_text and is_valid_indian_plate(plate_text):
                     current_frame_plates.append(plate_text)
 
-        if current_frame_plates:
+            if current_frame_plates:
 
-            if not is_accumulating:
-                is_accumulating = True
-                accumulation_start_time = time.time()
-                plate_counter.clear()
-                print("\n⏱️ Plate detected! Starting scan window...")
+                if not is_accumulating:
+                    is_accumulating = True
+                    accumulation_start_time = time.time()
+                    plate_counter.clear()
+                    print("\n⏱️ Plate detected! Starting scan window...")
 
             for plate in current_frame_plates:
                 plate_counter[plate] += 1
 
-    except Exception as e:
-        print(f"ALPR Error: {e}")
+        except Exception as e:
+            print(f"ALPR Error: {e}")
 
     if is_accumulating:
         elapsed = time.time() - accumulation_start_time
