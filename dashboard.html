@@ -118,16 +118,38 @@
             </div>
         </div>
     </div>
+<div id="page-reports" class="page">
+    <div class="page-inner">
 
-    <div id="page-reports" class="page">
-        <div class="page-inner">
-            <h2 class="section-heading">Reports</h2>
-            <div class="reports-grid">
-                <div class="report-card" onclick="exportCSV()"><div class="report-icon">📥</div><div class="report-title">Export Today's Data</div></div>
-                <div class="report-card"><div class="report-icon">📊</div><div class="report-title">Weekly Summary</div></div>
+        <h2 class="section-heading">Reports</h2>
+
+        <div class="reports-grid">
+
+            <!-- Today's Report -->
+            <div class="report-card" onclick="exportCSV()">
+                <div class="report-icon">📥</div>
+                <div class="report-title">Today's Report</div>
+                <div class="report-subtitle">Download CSV</div>
             </div>
+
+            <!-- Weekly Summary -->
+            <div class="report-card" onclick="downloadWeekly()">
+                <div class="report-icon">📊</div>
+                <div class="report-title">Weekly Summary</div>
+                <div class="report-subtitle">Download CSV</div>
+            </div>
+
+            <!-- Monthly Summary -->
+            <div class="report-card" onclick="downloadMonthly()">
+                <div class="report-icon">📅</div>
+                <div class="report-title">Monthly Summary</div>
+                <div class="report-subtitle">Download CSV</div>
+            </div>
+
         </div>
+
     </div>
+</div>
 
     <div id="page-settings" class="page">
         <div class="page-inner">

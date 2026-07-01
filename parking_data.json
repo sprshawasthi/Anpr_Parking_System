@@ -17,6 +17,12 @@
       "building": "Parking 2",
       "name": "Ground Floor",
       "capacity": 100
+    },
+    {
+      "id": "grkgvmirvkg-6767",
+      "building": "grkgvmirvkg",
+      "name": "6767",
+      "capacity": 1
     }
   ],
   "active_vehicles": [],

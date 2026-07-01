@@ -287,13 +287,80 @@ function confirmReset() {
 }
 
 function exportCSV() {
-    const rows = [['Vehicle', 'Floor', 'Entry', 'Exit', 'Duration']];
+
+    const rows = [];
+
+    // ===== SUMMARY =====
+
+    const entered = parkingHistory.length;
+
+    const exited = parkingHistory.length;
+
+    const inside = activeVehicles.length;
+
+    const totalVehicles = entered + inside;
+
+    rows.push(["SJVN SMART PARKING SYSTEM"]);
+    rows.push(["TODAY'S REPORT"]);
+    rows.push([]);
+
+    rows.push(["Metric", "Count"]);
+    rows.push(["Vehicles Entered", entered]);
+    rows.push(["Vehicles Exited", exited]);
+    rows.push(["Vehicles Currently Inside", inside]);
+    rows.push(["Total Vehicles", totalVehicles]);
+    rows.push([]);
+
+    // ===== DETAILED RECORDS =====
+
+    rows.push([
+        "Vehicle",
+        "Floor",
+        "Entry Time",
+        "Exit Time",
+        "Duration"
+    ]);
+
     parkingHistory.forEach(v => {
-        const floorName = (floors.find(f => f.id === v.floor_id) || {}).name || v.floor_id || '';
-        rows.push([v.vehicle_no, floorName, v.entry_time.toLocaleString('en-IN'), v.exit_time.toLocaleString('en-IN'), v.duration]);
+
+        const floorName =
+            (floors.find(f => f.id === v.floor_id) || {}).name ||
+            v.floor_id ||
+            "";
+
+        rows.push([
+            v.vehicle_no,
+            floorName,
+            v.entry_time.toLocaleString("en-IN"),
+            v.exit_time.toLocaleString("en-IN"),
+            v.duration
+        ]);
+
     });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
-    a.download = 'sjvn_parking_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
+
+    const blob = new Blob(
+        [rows.map(r => r.join(",")).join("\n")],
+        { type: "text/csv" }
+    );
+
+    const a = document.createElement("a");
+
+    a.href = URL.createObjectURL(blob);
+
+    a.download =
+        "Today's_Report_" +
+        new Date().toISOString().slice(0,10) +
+        ".csv";
+
+    a.click();
+}
+
+function downloadWeekly() {
+    alert("Weekly Summary coming soon.");
+}
+
+function downloadMonthly() {
+    alert("Monthly Summary coming soon.");
 }
 
 loadFloors().then(pollData);
