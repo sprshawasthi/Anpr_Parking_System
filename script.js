@@ -103,14 +103,12 @@ function buildFloorContainer(containerId, prefix, columns) {
         return;
     }
 
-    // 1. Group floors by building
     const grouped = floors.reduce((acc, f) => {
         if (!acc[f.building]) acc[f.building] = [];
         acc[f.building].push(f);
         return acc;
     }, {});
 
-    // 2. Render groups
     container.innerHTML = Object.keys(grouped).map(buildingName => `
         <div class="building-section" style="margin-bottom: 30px;">
             <h2 class="building-heading" style="color: #0d1b3e; margin-bottom: 10px;">${buildingName}</h2>
@@ -194,57 +192,48 @@ function updateLastDetected(plate, timeStr, status) {
 
 function pollData() {
     loadFloors();
+    // NEW: Refresh the camera list live to update online/offline badges
+    if (document.getElementById('page-settings').classList.contains('active')) {
+        loadCameras(); 
+    }
+    
     fetch(API + '/status').then(r => r.json()).then(data => {
         flaskOnline = true; document.getElementById('systemStatus').textContent = 'Online';
         updateStatCards(data.occupied, data.available, data.max_slots, data.today_entries);
     }).catch(() => { flaskOnline = false; document.getElementById('systemStatus').textContent = 'Offline'; });
 
-    fetch(API + '/active').then(r => r.json()).then(vehicles => {
-        const prev = activeVehicles.map(v => v.vehicle_no);
-        activeVehicles = vehicles.map(v => ({ vehicle_no: v.plate_number, entry_time: new Date(v.entry_time), floor_id: v.floor_id, floor: v.floor }));
-        vehicles.forEach(v => {
-            if (!prev.includes(v.plate_number)) {
-                const timeStr = new Date(v.entry_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                recentDetections.unshift({ plate: v.plate_number, type: 'Entry', time: timeStr });
-                if (recentDetections.length > 20) recentDetections.pop();
-                updateLastDetected(v.plate_number, timeStr, 'Entry Detected');
-            }
-        });
-        renderActiveTable(); renderRecentList();
-    }).catch(() => {});
-
-    fetch(API + '/history').then(r => r.json()).then(history => {
-        const prev = parkingHistory.map(v => v.vehicle_no + v.raw_exit);
+    Promise.all([
+        fetch(API + '/active').then(r => r.json()),
+        fetch(API + '/history').then(r => r.json())
+    ]).then(([active, history]) => {
+        activeVehicles = active.map(v => ({ vehicle_no: v.plate_number, entry_time: new Date(v.entry_time), floor_id: v.floor_id, floor: v.floor }));
         parkingHistory = history.map(v => ({ vehicle_no: v.plate_number, entry_time: new Date(v.entry_time), exit_time: new Date(v.exit_time), raw_exit: v.exit_time, floor_id: v.floor_id, duration: v.duration_minutes + ' mins' }));
-        history.forEach(v => {
-            const key = v.plate_number + v.exit_time;
-            if (prev.length > 0 && !prev.includes(key)) {
-                const timeStr = new Date(v.exit_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                recentDetections.unshift({ plate: v.plate_number, type: 'Exit', time: timeStr });
-                if (recentDetections.length > 20) recentDetections.pop();
-                updateLastDetected(v.plate_number, timeStr, 'Exit Detected');
-            }
-        });
-        renderHistoryTable(); renderRecentList();
+        
+        renderActiveTable();
+        renderHistoryTable();
+
+        let allEvents = [];
+        active.forEach(v => allEvents.push({ plate: v.plate_number, type: 'Entry', dateObj: new Date(v.entry_time) }));
+        history.forEach(v => allEvents.push({ plate: v.plate_number, type: 'Exit', dateObj: new Date(v.exit_time) }));
+        allEvents.sort((a, b) => b.dateObj - a.dateObj); 
+        
+        recentDetections = allEvents.slice(0, 20).map(e => ({
+            plate: e.plate,
+            type: e.type,
+            time: e.dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        }));
+
+        renderRecentList();
+
+        if (recentDetections.length > 0) {
+            const latest = recentDetections[0];
+            updateLastDetected(latest.plate, latest.time, latest.type + ' Detected');
+        }
     }).catch(() => {});
 }
 
 setInterval(() => { activeVehicles.forEach(v => { const el = document.getElementById('dur-' + v.vehicle_no); if (el) el.textContent = calcDuration(v.entry_time); }); }, 1000);
 setInterval(pollData, 3000);
-
-function detectVehicle() {
-    const input = document.getElementById('vehicleInput'); const floorSelect = document.getElementById('vehicleFloorSelect');
-    if (!input) return; const plate = input.value.trim().toUpperCase();
-    if (!plate) return alert('Enter a vehicle number first.');
-    const body = { plate }; if (floorSelect && floorSelect.value) body.floor_id = floorSelect.value;
-    fetch(API + '/vehicle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(r => r.json()).then(() => { input.value = ''; pollData(); }).catch(() => alert('Flask offline.'));
-}
-
-function viewVehicle(plate) {
-    const v = activeVehicles.find(x => x.vehicle_no === plate);
-    if (v) alert(`Vehicle: ${v.vehicle_no}\nFloor: ${v.floor || v.floor_id}\nEntry: ${v.entry_time.toLocaleString('en-IN')}\nDuration: ${calcDuration(v.entry_time)}`);
-}
 
 function renderFloorManageList() {
     const list = document.getElementById('floorsManageList');
@@ -254,8 +243,17 @@ function renderFloorManageList() {
 }
 
 function renderVehicleFloorSelect() {
-    const select = document.getElementById('vehicleFloorSelect');
-    if (select) select.innerHTML = floors.map(f => `<option value="${f.id}">${f.building} - ${f.name}</option>`).join('');
+    const vSelect = document.getElementById('vehicleFloorSelect');
+    if (vSelect) vSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.building} - ${f.name}</option>`).join('');
+
+    const camSelect = document.getElementById('camFloorSelect');
+    if (camSelect) {
+        if (floors.length === 0) {
+            camSelect.innerHTML = '<option value="">No floors available</option>';
+        } else {
+            camSelect.innerHTML = floors.map(f => `<option value="${f.id}">${f.building} - ${f.name}</option>`).join('');
+        }
+    }
 }
 
 function addFloor() {
@@ -282,6 +280,87 @@ function removeFloor(floorId) {
     }).catch(() => alert('Flask offline.'));
 }
 
+function registerCamera() {
+    const nameInput = document.getElementById('camName');
+    const sourceInput = document.getElementById('camSource');
+    const floorSelect = document.getElementById('camFloorSelect');
+
+    const name = nameInput.value.trim();
+    const source = sourceInput.value.trim();
+    const floor_id = floorSelect ? floorSelect.value : '';
+
+    if (!name) return alert('Please enter a Camera Name.');
+    if (!source) return alert('Please enter a Stream URL or Source.');
+    if (!floor_id) return alert('Please select a target floor.');
+
+    fetch(API + '/cameras', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ name, source, floor_id }) 
+    })
+    .then(r => {
+        if (r.ok) {
+            alert(`Camera "${name}" registered successfully!`);
+            nameInput.value = '';
+            sourceInput.value = '';
+            loadCameras();
+        } else {
+            alert('Failed to register camera.');
+        }
+    })
+    .catch(() => alert('Flask server offline.'));
+}
+
+function loadCameras() {
+    fetch(API + '/cameras')
+    .then(r => r.json())
+    .then(cameras => {
+        const list = document.getElementById('cameraManageList');
+        if (!list) return;
+        
+        if (!cameras || cameras.length === 0) {
+            list.innerHTML = '<div class="empty-row">No cameras registered yet.</div>';
+            return;
+        }
+        
+        // NEW: Injects Online/Offline and Gatekeeper/Tracker Badges
+        list.innerHTML = cameras.map(c => {
+            const statusColor = c.status === 'Online' ? '#10b981' : '#ef4444';
+            return `
+                <div class="floor-manage-row">
+                    <div class="floor-manage-name">
+                        <strong>${c.name}</strong> 
+                        <span style="font-size:11px; color: ${c.is_gatekeeper ? '#d97706' : '#2563eb'}; margin-left: 8px; font-weight: bold; background: ${c.is_gatekeeper ? '#fef3c7' : '#dbeafe'}; padding: 2px 6px; border-radius: 4px;">
+                            ${c.is_gatekeeper ? 'GATEKEEPER' : 'TRACKER'}
+                        </span>
+                        <span style="font-size:11px; color: ${statusColor}; margin-left: 8px; font-weight: bold; border: 1px solid ${statusColor}; padding: 2px 6px; border-radius: 4px;">
+                            ● ${c.status || 'Offline'}
+                        </span>
+                        <span style="font-size:13px; color:#666; margin-left: 10px;">(Floor: ${c.floor_id})</span>
+                    </div>
+                    <button class="btn-remove-floor" onclick="removeCamera('${c.name}')">Remove</button>
+                </div>
+            `;
+        }).join('');
+    })
+    .catch(() => {});
+}
+
+function removeCamera(camName) {
+    if (!confirm(`Are you sure you want to remove the camera: ${camName}?`)) return;
+    
+    fetch(`${API}/cameras/${camName}`, { method: 'DELETE' })
+    .then(r => {
+        if (r.ok) {
+            alert(`Camera ${camName} removed!`);
+            loadCameras();
+        } else {
+            alert('Failed to remove camera.');
+        }
+    })
+    .catch(() => alert('Flask server offline.'));
+}
+
 function confirmReset() {
     if (confirm('⚠️ Clear all active vehicles?')) fetch(API + '/reset', { method: 'POST' }).then(() => pollData()).catch(() => alert('Flask offline.'));
 }
@@ -296,4 +375,7 @@ function exportCSV() {
     a.download = 'sjvn_parking_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
 }
 
-loadFloors().then(pollData);
+loadFloors().then(() => {
+    loadCameras();
+    pollData();
+});

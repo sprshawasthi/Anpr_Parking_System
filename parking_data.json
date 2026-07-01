@@ -1,24 +1,28 @@
 {
   "floors": [
     {
-      "id": "parking-1-basement-1",
-      "building": "Parking 1",
-      "name": "basement 1",
-      "capacity": 40
-    },
-    {
-      "id": "parking-1-basement-2",
-      "building": "Parking 1",
-      "name": "Basement 2",
-      "capacity": 60
-    },
-    {
-      "id": "parking-2-ground-floor",
-      "building": "Parking 2",
-      "name": "Ground Floor",
-      "capacity": 100
+      "id": "p1-gf",
+      "building": "P1",
+      "name": "GF",
+      "capacity": 20
     }
   ],
   "active_vehicles": [],
-  "history": []
+  "history": [
+    {
+      "plate_number": "TN87C5106",
+      "entry_time": "2026-07-01T21:59:06.412857",
+      "exit_time": "2026-07-01T21:59:51.089328",
+      "floor_id": "parking-1-ground-floor",
+      "duration_minutes": 0.7
+    }
+  ],
+  "cameras": [
+    {
+      "name": "phone 1",
+      "source": "https://192.168.1.6:8080/video",
+      "floor_id": "p1-gf",
+      "is_gatekeeper": true
+    }
+  ]
 }

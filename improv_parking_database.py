@@ -13,9 +13,6 @@ DB_PATH = os.path.join(SCRIPT_DIR, "parking.db")
 
 last_scans = {}
 
-
-# ===== DATABASE INIT =====
-
 def initialize_database():
     """Creates the SQLite database and tables if they don't exist."""
     print(f"📂 Using database at: {DB_PATH}")

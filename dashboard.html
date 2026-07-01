@@ -132,6 +132,7 @@
     <div id="page-settings" class="page">
         <div class="page-inner">
             <h2 class="section-heading">Settings</h2>
+            
             <div class="settings-card">
                 <h3>Manage Parking Buildings & Floors</h3>
                 <div class="settings-hint">Add a new floor to an existing building, or type a new building name to create one automatically. Total capacity scales dynamically.</div>
@@ -149,6 +150,20 @@
                 <p>Clears all active vehicles. History is preserved.</p>
                 <button class="btn-danger" onclick="confirmReset()">Reset Active Parking</button>
             </div>
+
+            <div class="settings-card" style="margin-top: 20px;">
+                <h3>Register New IP Camera</h3>
+                <div class="settings-row">
+                    <input type="text" id="camName" placeholder="Camera Name">
+                    <input type="text" id="camSource" placeholder="RTSP/HTTP Stream URL">
+                    <select id="camFloorSelect"></select>
+                    <button onclick="registerCamera()">Add Camera</button>
+                </div>
+                
+                <h4 style="margin-top: 20px; font-size: 15px; color: var(--text-secondary);">Active Cameras</h4>
+                <div class="camera-manage-list" id="cameraManageList" style="margin-top: 10px;"></div>
+            </div>
+
         </div>
     </div>
 </main>

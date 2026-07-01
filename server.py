@@ -2,6 +2,7 @@ import os
 import json
 import re
 import threading
+import time
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -13,6 +14,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(SCRIPT_DIR, "parking_data.json")
 LOCK = threading.Lock()
 
+last_seen = {}
+COOLDOWN_SECONDS = 30 
+camera_heartbeats = {}  # NEW: Tracks the last time we heard from a camera
+
 DEFAULT_DATA = {
     "floors": [
         {"id": "hq-ground", "building": "SJVN HQ", "name": "Ground Floor", "capacity": 80},
@@ -20,7 +25,8 @@ DEFAULT_DATA = {
         {"id": "res-ground", "building": "Residential Complex", "name": "Ground Floor", "capacity": 50}
     ],
     "active_vehicles": [],   
-    "history": []            
+    "history": [],
+    "cameras": []
 }
 
 def load_data():
@@ -55,51 +61,56 @@ def occupied_counts(data):
         counts[v["floor_id"]] = counts.get(v["floor_id"], 0) + 1
     return counts
 
-def log_vehicle_from_camera(plate, floor_id=None):
-    """Called directly by Improv_camera_detector.py"""
+def log_vehicle_from_camera(plate, floor_id=None, is_gatekeeper=False):
     plate = plate.strip().upper()
     if not plate: return False
+    
+    current_time = time.time()
+    if plate in last_seen and (current_time - last_seen[plate]) < COOLDOWN_SECONDS:
+        return False
+    last_seen[plate] = current_time
     
     with LOCK:
         data = load_data()
         existing = next((v for v in data["active_vehicles"] if v["plate_number"] == plate), None)
 
-        if existing:
-            entry_time = datetime.fromisoformat(existing["entry_time"])
-            exit_time = datetime.now()
-            duration_minutes = round((exit_time - entry_time).total_seconds() / 60, 1)
-            data["active_vehicles"] = [v for v in data["active_vehicles"] if v["plate_number"] != plate]
-            data["history"].append({
-                "plate_number": plate,
-                "entry_time": existing["entry_time"],
-                "exit_time": exit_time.isoformat(),
-                "floor_id": existing["floor_id"],
-                "duration_minutes": duration_minutes
-            })
-            save_data(data)
-            print(f"📤 [SERVER] EXIT Logged: {plate}")
+        if is_gatekeeper:
+            if existing:
+                entry_time = datetime.fromisoformat(existing["entry_time"])
+                exit_time = datetime.now()
+                duration_minutes = round((exit_time - entry_time).total_seconds() / 60, 1)
+                data["active_vehicles"] = [v for v in data["active_vehicles"] if v["plate_number"] != plate]
+                data["history"].append({
+                    "plate_number": plate,
+                    "entry_time": existing["entry_time"],
+                    "exit_time": exit_time.isoformat(),
+                    "floor_id": existing["floor_id"],
+                    "duration_minutes": duration_minutes
+                })
+                save_data(data)
+                print(f"📤 [GATEKEEPER] EXIT Logged: {plate}")
+                return True
+            else:
+                data["active_vehicles"].append({
+                    "plate_number": plate,
+                    "entry_time": datetime.now().isoformat(),
+                    "floor_id": floor_id
+                })
+                save_data(data)
+                print(f"📥 [GATEKEEPER] ENTRY Logged: {plate} at floor {floor_id}")
+                return True
+        else:
+            if existing:
+                if existing["floor_id"] != floor_id:
+                    old_floor = existing["floor_id"]
+                    existing["floor_id"] = floor_id
+                    save_data(data)
+                    print(f"📍 [TRACKER] Vehicle {plate} shifted from {old_floor} to {floor_id}")
+                else:
+                    print(f"👁️ [TRACKER] Vehicle {plate} spotted again on {floor_id}")
+            else:
+                print(f"👁️ [TRACKER] Vehicle {plate} spotted on {floor_id} (No active entry record)")
             return True
-
-        floors = floor_lookup(data)
-        if not floor_id or floor_id not in floors:
-            counts = occupied_counts(data)
-            chosen = next((f["id"] for f in data["floors"] if counts.get(f["id"], 0) < f["capacity"]), None)
-            if not chosen:
-                print(f"⚠️ [SERVER] PARKING FULL! Denied: {plate}")
-                return False
-            floor_id = chosen
-        elif occupied_counts(data).get(floor_id, 0) >= floors[floor_id]["capacity"]:
-            print(f"⚠️ [SERVER] {floor_id} IS FULL! Denied: {plate}")
-            return False
-
-        data["active_vehicles"].append({
-            "plate_number": plate,
-            "entry_time": datetime.now().isoformat(),
-            "floor_id": floor_id
-        })
-        save_data(data)
-        print(f"📥 [SERVER] ENTRY Logged: {plate} at {floors[floor_id]['building']} - {floors[floor_id]['name']}")
-        return True
 
 @app.route("/api/floors", methods=["GET"])
 def get_floors():
@@ -189,7 +200,8 @@ def detect_vehicle_api():
     body = request.get_json(force=True, silent=True) or {}
     plate = body.get("plate", "")
     floor_id = body.get("floor_id")
-    log_vehicle_from_camera(plate, floor_id)
+    is_gate = body.get("is_gatekeeper", False)
+    log_vehicle_from_camera(plate, floor_id, is_gate)
     return jsonify({"ok": True})
 
 @app.route("/api/reset", methods=["POST"])
@@ -199,6 +211,68 @@ def reset_active():
         data["active_vehicles"] = []
         save_data(data)
         return jsonify({"ok": True})
+
+# ─── NEW: HEARTBEAT ROUTE ───
+@app.route("/api/cameras/heartbeat", methods=["POST"])
+def camera_heartbeat():
+    body = request.get_json(force=True, silent=True) or {}
+    cam_name = body.get("name")
+    if cam_name:
+        camera_heartbeats[cam_name] = time.time()
+    return jsonify({"ok": True})
+
+@app.route("/api/cameras", methods=["GET", "POST"])
+def manage_cameras():
+    with LOCK:
+        data = load_data()
+        if "cameras" not in data: data["cameras"] = []
+        
+        if request.method == "POST":
+            body = request.get_json()
+            cam_name = body["name"]
+            floor_id = body["floor_id"]
+            
+            target_floor = next((f for f in data["floors"] if f["id"] == floor_id), None)
+            building_name = target_floor.get("building", "Main Building") if target_floor else "Main Building"
+            
+            floor_map = {f["id"]: f.get("building", "Main Building") for f in data["floors"]}
+            facility_has_camera = any(floor_map.get(c["floor_id"]) == building_name for c in data["cameras"])
+            
+            is_gatekeeper = not facility_has_camera
+            
+            existing_cam = next((c for c in data["cameras"] if c["name"] == cam_name), None)
+            if existing_cam:
+                existing_cam["source"] = body["source"]
+                existing_cam["floor_id"] = floor_id
+                existing_cam["is_gatekeeper"] = existing_cam.get("is_gatekeeper", is_gatekeeper)
+            else:
+                data["cameras"].append({
+                    "name": cam_name,
+                    "source": body["source"],
+                    "floor_id": floor_id,
+                    "is_gatekeeper": is_gatekeeper
+                })
+                
+            save_data(data)
+            return jsonify({"status": "success", "is_gatekeeper": is_gatekeeper}), 201
+        
+        # Inject live online/offline status before sending to dashboard
+        now = time.time()
+        for c in data["cameras"]:
+            last_beat = camera_heartbeats.get(c["name"], 0)
+            # If heard from in last 15 seconds, it's online
+            c["status"] = "Online" if (now - last_beat) < 15 else "Offline"
+            
+        return jsonify(data["cameras"])
+
+@app.route("/api/cameras/<cam_name>", methods=["DELETE"])
+def delete_camera(cam_name):
+    with LOCK:
+        data = load_data()
+        if "cameras" in data:
+            data["cameras"] = [c for c in data["cameras"] if c["name"] != cam_name]
+            save_data(data)
+        return jsonify({"status": "deleted"}), 200
 
 def run_server():
     load_data() 

@@ -1,3 +1,4 @@
+import json
 import time
 import cv2
 import threading
@@ -7,6 +8,9 @@ import pandas as pd
 from collections import Counter
 from fast_alpr import ALPR
 import server
+import requests
+
+DATA_FILE = "parking_data.json"
 
 # ===== INIT FLASK SERVER =====
 flask_thread = threading.Thread(target=server.run_server, daemon=True)
@@ -71,11 +75,28 @@ def merge_fuzzy_reads(counter, max_dist=1):
                 processed.add(oth_p)
     return merged
 
-# 🔴 UPDATE PHONE IP HERE! floor_id must match the IDs created in your dashboard
-CAMERA_CONFIGS = {
-    "Webcam_Main": {"source": 0, "floor_id": "hq-ground"},
-    "Phone_Ramp":  {"source": "http://192.168.1.6:8080/video", "floor_id": "hq-b1"}
-}
+def get_dynamic_camera_configs():
+    try:
+        with open(DATA_FILE, "r") as f:
+            data = json.load(f)
+        return {c["name"]: {
+            "source": c["source"], 
+            "floor_id": c["floor_id"],
+            "is_gatekeeper": c.get("is_gatekeeper", False)
+        } for c in data.get("cameras", [])}
+    except FileNotFoundError:
+        return {}
+
+def camera_manager():
+    active_threads = {}
+    while True:
+        configs = get_dynamic_camera_configs()
+        for name, cfg in configs.items():
+            if name not in active_threads:
+                t = threading.Thread(target=camera_streamer, args=(name, cfg), daemon=True)
+                t.start()
+                active_threads[name] = t
+        time.sleep(10) 
 
 ai_processing_queue = queue.Queue(maxsize=4)
 latest_display_frames = {}
@@ -84,10 +105,19 @@ frame_lock = threading.Lock()
 def camera_streamer(cam_name, config):
     source = config["source"]
     floor_id = config["floor_id"]
-    print(f"📷 Stream starting: {cam_name} (Target: {floor_id})")
+    is_gate = config["is_gatekeeper"]
+    role = "GATEKEEPER" if is_gate else "TRACKER"
+    print(f"📷 Stream starting: {cam_name} (Floor: {floor_id} | Role: {role})")
+    
+    try:
+        source = int(source)
+    except ValueError:
+        pass
+        
     cap = cv2.VideoCapture(source)
     previous_frame = None
     MOTION_THRESHOLD = 15000  
+    last_heartbeat = 0 # Tracks when we last pinged the server
 
     while True:
         ret, frame = cap.read()
@@ -95,6 +125,15 @@ def camera_streamer(cam_name, config):
             time.sleep(2)
             cap = cv2.VideoCapture(source)
             continue
+            
+        # --- NEW: Send heartbeat every 5 seconds if frames are successfully reading ---
+        current_time = time.time()
+        if current_time - last_heartbeat > 5.0:
+            try:
+                requests.post("http://localhost:5000/api/cameras/heartbeat", json={"name": cam_name}, timeout=1)
+            except Exception: pass
+            last_heartbeat = current_time
+        # ------------------------------------------------------------------------------
 
         with frame_lock: latest_display_frames[cam_name] = frame.copy()
 
@@ -108,22 +147,25 @@ def camera_streamer(cam_name, config):
         previous_frame = gray
 
         if motion_level > MOTION_THRESHOLD and not ai_processing_queue.full():
-            ai_processing_queue.put((cam_name, floor_id, frame))
+            ai_processing_queue.put((cam_name, floor_id, is_gate, frame))
 
 alpr = ALPR(detector_model="yolo-v9-t-384-license-plate-end2end", ocr_model="cct-xs-v2-global-model")
 
-for name, cfg in CAMERA_CONFIGS.items():
-    threading.Thread(target=camera_streamer, args=(name, cfg), daemon=True).start()
+threading.Thread(target=camera_manager, daemon=True).start()
 
 print("\n🚀 Multi-Camera Setup Active! Press ESC to stop.\n")
 
 ACCUMULATION_WINDOW = 7.0
-sessions = {name: {"active": False, "start": 0, "counter": Counter()} for name in CAMERA_CONFIGS}
+sessions = {}
 
 while True:
     try:
         try:
-            cam_name, floor_id, frame = ai_processing_queue.get_nowait()
+            cam_name, floor_id, is_gate, frame = ai_processing_queue.get_nowait()
+            
+            if cam_name not in sessions:
+                sessions[cam_name] = {"active": False, "start": 0, "counter": Counter(), "floor_id": floor_id, "is_gate": is_gate}
+
             cv2.imwrite(f"/tmp/temp_{cam_name}.jpg", frame)
             results = alpr.predict(f"/tmp/temp_{cam_name}.jpg")
             
@@ -138,7 +180,7 @@ while True:
                 if not s["active"]:
                     s["active"], s["start"] = True, time.time()
                     s["counter"].clear()
-                    print(f"\n⏱️ [{cam_name}] Motion & Plate detected! Scanning...")
+                    print(f"\n⏱️ [{cam_name}] Plate Activity Spotted! Processing OCR scan...")
                 for p in valid_plates: s["counter"][p] += 1
         except queue.Empty:
             pass 
@@ -150,14 +192,15 @@ while True:
                     merged = merge_fuzzy_reads(s["counter"], max_dist=1)
                     best_plate, count = merged.most_common(1)[0]
                     if count >= 2:
-                        target_id = CAMERA_CONFIGS[cam_name]["floor_id"]
-                        print(f"\n✅ [{cam_name}] Confirmed: {best_plate}")
-                        server.log_vehicle_from_camera(best_plate, floor_id=target_id)
+                        target_id = s["floor_id"]
+                        is_gatekeeper_mode = s["is_gate"]
+                        print(f"\n✅ [{cam_name}] Confirmed Plate Identity: {best_plate}")
+                        server.log_vehicle_from_camera(best_plate, floor_id=target_id, is_gatekeeper=is_gatekeeper_mode)
                     else:
-                        print(f"\n❌ [{cam_name}] Rejected: '{best_plate}' (Seen {count}x).")
+                        print(f"\n❌ [{cam_name}] Rejected ambiguous scan read: '{best_plate}'.")
                 s["active"] = False
                 s["counter"].clear()
-                print(f"⏳ [{cam_name}] Resetting motion gate...\n")
+                print(f"⏳ [{cam_name}] Motion gate refreshed.\n")
 
         with frame_lock: display_copies = list(latest_display_frames.items())
         for win, img in display_copies: cv2.imshow(f"Live: {win}", img)
