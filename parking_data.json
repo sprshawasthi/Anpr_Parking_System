@@ -1,10 +1,22 @@
 {
   "floors": [
     {
-      "id": "p1-gf",
-      "building": "P1",
-      "name": "GF",
-      "capacity": 20
+      "id": "parking-1-basement-1",
+      "building": "Parking 1",
+      "name": "basement 1",
+      "capacity": 40
+    },
+    {
+      "id": "parking-1-basement-2",
+      "building": "Parking 1",
+      "name": "Basement 2",
+      "capacity": 60
+    },
+    {
+      "id": "parking-2-ground-floor",
+      "building": "Parking 2",
+      "name": "Ground Floor",
+      "capacity": 100
     }
   ],
   "active_vehicles": [],

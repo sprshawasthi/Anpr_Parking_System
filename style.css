@@ -130,6 +130,7 @@ tbody tr:hover { background: #f3f6fb; }
     border-bottom: 2px solid var(--accent);
     padding-bottom: 5px;
     margin-top: 20px;
+     padding-left:18px;
 }
 .floor-heading {
     background: #eef3ff;
