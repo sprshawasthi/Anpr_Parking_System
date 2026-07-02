@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In · SJVN Smart Parking System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+        --sidebar-bg: #0d1b3e;
+        --accent: #1a56db;
+        --accent-light: #e8f0fe;
+        --green: #15803d;
+        --red: #b91c1c;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --border: #d1d5db;
+        --card-bg: #ffffff;
+        --bg: #f3f6fb;
+    }
+
+    body {
+        font-family: 'Inter', Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .login-shell {
+        width: 100%;
+        max-width: 920px;
+        min-height: 560px;
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 10px 40px rgba(13, 27, 62, 0.15);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        overflow: hidden;
+    }
+
+    /* ---------- Left brand panel ---------- */
+    .brand-panel {
+        background: linear-gradient(160deg, var(--sidebar-bg) 0%, #16265c 55%, var(--accent) 130%);
+        color: #fff;
+        padding: 48px 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+    .brand-panel::before {
+        content: "";
+        position: absolute;
+        width: 340px;
+        height: 340px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.06);
+        top: -120px;
+        right: -120px;
+    }
+    .brand-panel::after {
+        content: "";
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+        bottom: -80px;
+        left: -60px;
+    }
+    .brand-top { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+    .brand-logo {
+        width: 52px; height: 52px; object-fit: contain;
+        background: #fff; border-radius: 8px; padding: 3px; flex-shrink: 0;
+    }
+    .brand-title { font-weight: 800; font-size: 18px; letter-spacing: 0.5px; }
+    .brand-sub { font-size: 12.5px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+    .brand-mid { position: relative; z-index: 1; margin-top: 20px; }
+    .brand-headline { font-size: 27px; font-weight: 800; line-height: 1.3; margin-bottom: 14px; }
+    .brand-copy { font-size: 14.5px; color: rgba(255,255,255,0.78); max-width: 320px; }
+
+    .brand-features { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; margin-top: 30px; }
+    .brand-feature { display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,0.9); }
+    .brand-feature-icon {
+        width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,0.12);
+        display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
+    }
+
+    .brand-foot { position: relative; z-index: 1; font-size: 12px; color: rgba(255,255,255,0.55); }
+
+    /* ---------- Right form panel ---------- */
+    .form-panel {
+        padding: 52px 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .form-heading { font-size: 25px; font-weight: 800; margin-bottom: 6px; }
+    .form-subheading { font-size: 14.5px; color: var(--text-secondary); margin-bottom: 30px; }
+
+    .field-group { margin-bottom: 18px; }
+    .field-label { display: block; font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 7px; }
+
+    .input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .input-icon {
+        position: absolute;
+        left: 14px;
+        font-size: 16px;
+        color: var(--text-secondary);
+        pointer-events: none;
+    }
+    .field-group input {
+        width: 100%;
+        padding: 12px 14px 12px 40px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: inherit;
+        color: var(--text-primary);
+        background: #fbfcfe;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-group input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-light);
+        background: #fff;
+    }
+
+    /* password field with toggle positioned like a logo/icon button */
+    .password-toggle {
+        position: absolute;
+        right: 8px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: var(--text-secondary);
+        padding: 6px 8px;
+        border-radius: 6px;
+        line-height: 1;
+    }
+    .password-toggle:hover { background: var(--accent-light); color: var(--accent); }
+
+    .row-between {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 22px;
+        font-size: 13.5px;
+    }
+    .remember-me { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+    .remember-me input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+    .forgot-link { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .btn-signin {
+        width: 100%;
+        padding: 13px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.15s, transform 0.1s;
+    }
+    .btn-signin:hover { background: #1746b3; }
+    .btn-signin:active { transform: scale(0.99); }
+    .btn-signin:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .error-banner {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        background: #fee2e2;
+        color: var(--red);
+        border: 1px solid #fecaca;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 600;
+        margin-bottom: 18px;
+    }
+    .error-banner.show { display: flex; }
+
+    .hint-banner {
+        margin-top: 22px;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        background: var(--accent-light);
+        border-radius: 8px;
+        padding: 10px 14px;
+        text-align: center;
+    }
+    .hint-banner b { color: var(--accent); }
+
+    .form-foot {
+        margin-top: 28px;
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+    }
+
+    @media (max-width: 760px) {
+        .login-shell { grid-template-columns: 1fr; }
+        .brand-panel { display: none; }
+        .form-panel { padding: 40px 28px; }
+    }
+</style>
+</head>
+<body>
+
+<div class="login-shell">
+
+    <!-- Left branding panel -->
+    <div class="brand-panel">
+        <div class="brand-top">
+            <img src="sjvn-logo.png" alt="SJVN Logo" class="brand-logo">
+            <div>
+                <div class="brand-title">SJVN PARKING</div>
+                <div class="brand-sub">Smart Parking Management</div>
+            </div>
+        </div>
+
+        <div class="brand-mid">
+            <div class="brand-headline">Automated ANPR-powered<br>parking, monitored live.</div>
+            <div class="brand-copy">Sign in to track vehicle entries, exits, and real-time occupancy across every parking floor.</div>
+
+            <div class="brand-features">
+                <div class="brand-feature"><span class="brand-feature-icon">🎥</span> Live ANPR camera detection</div>
+                <div class="brand-feature"><span class="brand-feature-icon">📊</span> Real-time occupancy analytics</div>
+                <div class="brand-feature"><span class="brand-feature-icon">🚗</span> Full vehicle entry/exit history</div>
+            </div>
+        </div>
+
+        <div class="brand-foot">© 2026 SJVN Ltd. All rights reserved.</div>
+    </div>
+
+    <!-- Right login form panel -->
+    <div class="form-panel">
+        <div class="form-heading">Welcome back</div>
+        <div class="form-subheading">Sign in to access the parking dashboard</div>
+
+        <div class="error-banner" id="errorBanner">⚠️ <span id="errorText">Invalid username or password.</span></div>
+
+        <form id="loginForm" autocomplete="off">
+            <div class="field-group">
+                <label class="field-label" for="username">Username</label>
+                <div class="input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="password">Password</label>
+                <div class="input-wrap">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password">👁️</button>
+                </div>
+            </div>
+
+            <div class="row-between">
+                <label class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    Remember me
+                </label>
+                <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn-signin" id="signInBtn">Sign In</button>
+        </form>
+
+        <div class="hint-banner">Demo credentials — Username: <b>admin</b> &nbsp;|&nbsp; Password: <b>admin123</b></div>
+
+        <div class="form-foot">SJVN Smart Parking System &middot; ANPR Powered</div>
+    </div>
+</div>
+
+<script>
+    // ---- Demo credentials (client-side only — replace with real auth on the backend) ----
+    const VALID_USERNAME = "admin";
+    const VALID_PASSWORD = "admin123";
+
+    const form = document.getElementById("loginForm");
+    const errorBanner = document.getElementById("errorBanner");
+    const errorText = document.getElementById("errorText");
+    const signInBtn = document.getElementById("signInBtn");
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordInput = document.getElementById("password");
+
+    // If already logged in, skip straight to the dashboard
+    if (sessionStorage.getItem("sjvn_auth") === "true" || localStorage.getItem("sjvn_auth") === "true") {
+        window.location.href = "dashboard.html";
+    }
+
+    togglePassword.addEventListener("click", () => {
+        const isHidden = passwordInput.type === "password";
+        passwordInput.type = isHidden ? "text" : "password";
+        togglePassword.textContent = isHidden ? "🙈" : "👁️";
+        togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+    });
+
+    document.getElementById("forgotLink").addEventListener("click", (e) => {
+        e.preventDefault();
+        showError("Please contact your system administrator to reset your password.");
+    });
+
+    function showError(msg) {
+        errorText.textContent = msg;
+        errorBanner.classList.add("show");
+    }
+    function hideError() {
+        errorBanner.classList.remove("show");
+    }
+
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        hideError();
+
+        const username = document.getElementById("username").value.trim();
+        const password = passwordInput.value;
+        const rememberMe = document.getElementById("rememberMe").checked;
+
+        signInBtn.disabled = true;
+        signInBtn.textContent = "Signing in...";
+
+        setTimeout(() => {
+            if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+                if (rememberMe) {
+                    localStorage.setItem("sjvn_auth", "true");
+                    localStorage.setItem("sjvn_user", username);
+                } else {
+                    sessionStorage.setItem("sjvn_auth", "true");
+                    sessionStorage.setItem("sjvn_user", username);
+                }
+                window.location.href = "dashboard.html";
+            } else {
+                showError("Invalid username or password. Please try again.");
+                signInBtn.disabled = false;
+                signInBtn.textContent = "Sign In";
+            }
+        }, 400);
+    });
+</script>
+
+</body>
+</html>

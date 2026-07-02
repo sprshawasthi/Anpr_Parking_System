@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // ---- Auth guard: bounce to login.html if not signed in ----
+        if (sessionStorage.getItem("sjvn_auth") !== "true" && localStorage.getItem("sjvn_auth") !== "true") {
+            window.location.replace("login.html");
+        }
+    </script>
 </head>
 <body>
 
@@ -38,6 +44,7 @@
         <h1 class="page-title">SJVN Parking System</h1>
         <div class="topbar-right">
             <div class="admin-avatar"><div class="avatar-circle">A</div><div class="admin-info"><span class="admin-name">Admin</span><span class="admin-role">Administrator</span></div></div>
+            <button onclick="sjvnLogout()" title="Sign out" style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:8px 14px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;">⏻ Logout</button>
         </div>
     </header>
 
@@ -190,5 +197,14 @@
     </div>
 </main>
 <script src="script.js"></script>
+<script>
+    function sjvnLogout() {
+        sessionStorage.removeItem("sjvn_auth");
+        sessionStorage.removeItem("sjvn_user");
+        localStorage.removeItem("sjvn_auth");
+        localStorage.removeItem("sjvn_user");
+        window.location.href = "login.html";
+    }
+</script>
 </body>
 </html>
