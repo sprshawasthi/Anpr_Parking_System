@@ -1,22 +1,22 @@
 {
   "floors": [
     {
-      "id": "parking-1-basement-1",
-      "building": "Parking 1",
-      "name": "basement 1",
-      "capacity": 40
-    },
-    {
-      "id": "parking-1-basement-2",
-      "building": "Parking 1",
-      "name": "Basement 2",
-      "capacity": 60
-    },
-    {
       "id": "parking-2-ground-floor",
       "building": "Parking 2",
       "name": "Ground Floor",
-      "capacity": 100
+      "capacity": 20
+    },
+    {
+      "id": "parking-1-ground-floor",
+      "building": "Parking 1",
+      "name": "Ground Floor",
+      "capacity": 20
+    },
+    {
+      "id": "parking-1-basment-1",
+      "building": "Parking 1",
+      "name": "basment 1",
+      "capacity": 20
     }
   ],
   "active_vehicles": [],
@@ -31,10 +31,16 @@
   ],
   "cameras": [
     {
-      "name": "phone 1",
-      "source": "https://192.168.1.6:8080/video",
-      "floor_id": "p1-gf",
+      "name": "Alankriti",
+      "source": "https://100.107.186.78:8080/video",
+      "floor_id": "parking-2-ground-floor",
       "is_gatekeeper": true
+    },
+    {
+      "name": "Arnav",
+      "source": "https://172.16.19.203:8080/video",
+      "floor_id": "parking-1-basment-1",
+      "is_gatekeeper": false
     }
   ]
 }
