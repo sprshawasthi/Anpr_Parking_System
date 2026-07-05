@@ -29,6 +29,7 @@
             <li class="nav-item" onclick="showPage('records')"><span class="nav-icon">🚗</span><span class="nav-label">Vehicle Records</span></li>
             <li class="nav-item" onclick="showPage('analytics')"><span class="nav-icon">📊</span><span class="nav-label">Analytics</span></li>
             <li class="nav-item" onclick="showPage('reports')"><span class="nav-icon">📄</span><span class="nav-label">Reports</span></li>
+            <li class="nav-item" onclick="showPage('display')"><span class="nav-icon">🖥️</span><span class="nav-label">Live Display</span></li>
             <li class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Settings</span></li>
         </ul>
     </nav>
@@ -125,38 +126,42 @@
             </div>
         </div>
     </div>
-<div id="page-reports" class="page">
-    <div class="page-inner">
-
-        <h2 class="section-heading">Reports</h2>
-
-        <div class="reports-grid">
-
-            <!-- Today's Report -->
-            <div class="report-card" onclick="exportCSV()">
-                <div class="report-icon">📥</div>
-                <div class="report-title">Today's Report</div>
-                <div class="report-subtitle">Download CSV</div>
+    
+    <div id="page-reports" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Reports</h2>
+            <div class="reports-grid">
+                <div class="report-card" onclick="exportCSV()">
+                    <div class="report-icon">📥</div>
+                    <div class="report-title">Today's Report</div>
+                    <div class="report-subtitle">Download CSV</div>
+                </div>
+                <div class="report-card" onclick="downloadWeekly()">
+                    <div class="report-icon">📊</div>
+                    <div class="report-title">Weekly Summary</div>
+                    <div class="report-subtitle">Download CSV</div>
+                </div>
+                <div class="report-card" onclick="downloadMonthly()">
+                    <div class="report-icon">📅</div>
+                    <div class="report-title">Monthly Summary</div>
+                    <div class="report-subtitle">Download CSV</div>
+                </div>
             </div>
-
-            <!-- Weekly Summary -->
-            <div class="report-card" onclick="downloadWeekly()">
-                <div class="report-icon">📊</div>
-                <div class="report-title">Weekly Summary</div>
-                <div class="report-subtitle">Download CSV</div>
-            </div>
-
-            <!-- Monthly Summary -->
-            <div class="report-card" onclick="downloadMonthly()">
-                <div class="report-icon">📅</div>
-                <div class="report-title">Monthly Summary</div>
-                <div class="report-subtitle">Download CSV</div>
-            </div>
-
         </div>
-
     </div>
-</div>
+
+    <div id="page-display" class="page">
+        <div class="page-inner">
+            <h2 class="section-heading">Live Campus Availability</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                This screen updates automatically in real-time. Use this view for public lobby monitors.
+            </p>
+            
+            <div id="parkingDisplayBoard" style="display: flex; flex-direction: column; gap: 20px; font-family: 'Inter', sans-serif;">
+                <div style="text-align: center; padding: 40px; color: #64748b;">Loading live parking data...</div>
+            </div>
+        </div>
+    </div>
 
     <div id="page-settings" class="page">
         <div class="page-inner">

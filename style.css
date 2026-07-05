@@ -138,3 +138,36 @@ tbody tr:hover { background: #f3f6fb; }
     font-size: 14px;
     color: var(--accent);
 }
+
+/* Sidebar animation settings */
+.sidebar {
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.main-content {
+    transition: margin-left 0.3s ease;
+}
+
+/* When the sidebar is collapsed (Desktop) */
+@media (min-width: 769px) {
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+        width: 0;
+        overflow: hidden;
+    }
+    
+    .main-content.expanded {
+        margin-left: 0 !important;
+    }
+}
+
+/* When the sidebar is toggled on Mobile */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%); /* Hidden by default on mobile */
+    }
+    
+    .sidebar.collapsed {
+        transform: translateX(0); /* Show when toggled */
+    }
+}

@@ -1,25 +1,41 @@
 {
   "floors": [
     {
-      "id": "parking-2-ground-floor",
-      "building": "Parking 2",
-      "name": "Ground Floor",
-      "capacity": 20
+      "id": "parking-1-gf",
+      "building": "Parking 1",
+      "name": "GF",
+      "capacity": 10
     },
     {
-      "id": "parking-1-ground-floor",
+      "id": "parking-1-b1",
       "building": "Parking 1",
-      "name": "Ground Floor",
-      "capacity": 20
+      "name": "B1",
+      "capacity": 12
     },
     {
-      "id": "parking-1-basment-1",
+      "id": "parking-1-b2",
       "building": "Parking 1",
-      "name": "basment 1",
-      "capacity": 20
+      "name": "B2",
+      "capacity": 13
     }
   ],
-  "active_vehicles": [],
+  "active_vehicles": [
+    {
+      "plate_number": "TN775100",
+      "entry_time": "2026-07-03T15:00:05.256054",
+      "floor_id": "parking-2-ground-floor"
+    },
+    {
+      "plate_number": "TN174110",
+      "entry_time": "2026-07-03T15:00:07.382513",
+      "floor_id": "parking-1-basement-2"
+    },
+    {
+      "plate_number": "TN87C5106",
+      "entry_time": "2026-07-03T15:00:16.496743",
+      "floor_id": "parking-1-basement-2"
+    }
+  ],
   "history": [
     {
       "plate_number": "TN87C5106",
@@ -27,19 +43,39 @@
       "exit_time": "2026-07-01T21:59:51.089328",
       "floor_id": "parking-1-ground-floor",
       "duration_minutes": 0.7
+    },
+    {
+      "plate_number": "TN87C5106",
+      "entry_time": "2026-07-03T14:42:06.380496",
+      "exit_time": "2026-07-03T14:46:50.789861",
+      "floor_id": "parking-1-basment-1",
+      "duration_minutes": 4.7
+    },
+    {
+      "plate_number": "TN87C5106",
+      "entry_time": "2026-07-03T14:57:39.965102",
+      "exit_time": "2026-07-03T14:58:49.799431",
+      "floor_id": "parking-1-b1",
+      "duration_minutes": 1.2
     }
   ],
   "cameras": [
     {
-      "name": "Alankriti",
-      "source": "https://100.107.186.78:8080/video",
-      "floor_id": "parking-2-ground-floor",
+      "name": "habra zabra",
+      "source": "https://172.16.19.203:8080/video",
+      "floor_id": "parking-1-gf",
       "is_gatekeeper": true
     },
     {
-      "name": "Arnav",
-      "source": "https://172.16.19.203:8080/video",
-      "floor_id": "parking-1-basment-1",
+      "name": "habra zabr",
+      "source": "https://172.16.31.4:8080/video",
+      "floor_id": "parking-1-b2",
+      "is_gatekeeper": false
+    },
+    {
+      "name": "habra zab",
+      "source": "https://172.16.19.202:8080/video",
+      "floor_id": "parking-1-b1",
       "is_gatekeeper": false
     }
   ]

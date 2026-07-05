@@ -37,6 +37,14 @@ function switchTab(tabId, btnClass) {
     event.target.classList.add('active');
 }
 
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('expanded');
+}
+
 const occupancyChart = new Chart(document.getElementById('occupancyChart').getContext('2d'), {
     type: 'doughnut', data: { labels: ['Occupied', 'Available'], datasets: [{ data: [0, 200], backgroundColor: ['#1a56db', '#bfdbfe'], borderWidth: 0 }] },
     options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: true } }, animation: { duration: 600 } }
@@ -323,22 +331,27 @@ function loadCameras() {
             return;
         }
         
-        // NEW: Injects Online/Offline and Gatekeeper/Tracker Badges
+        // Injects Online/Offline, Roles, and the IP/Source URL
         list.innerHTML = cameras.map(c => {
             const statusColor = c.status === 'Online' ? '#10b981' : '#ef4444';
             return `
-                <div class="floor-manage-row">
-                    <div class="floor-manage-name">
-                        <strong>${c.name}</strong> 
-                        <span style="font-size:11px; color: ${c.is_gatekeeper ? '#d97706' : '#2563eb'}; margin-left: 8px; font-weight: bold; background: ${c.is_gatekeeper ? '#fef3c7' : '#dbeafe'}; padding: 2px 6px; border-radius: 4px;">
-                            ${c.is_gatekeeper ? 'GATEKEEPER' : 'TRACKER'}
-                        </span>
-                        <span style="font-size:11px; color: ${statusColor}; margin-left: 8px; font-weight: bold; border: 1px solid ${statusColor}; padding: 2px 6px; border-radius: 4px;">
-                            ● ${c.status || 'Offline'}
-                        </span>
-                        <span style="font-size:13px; color:#666; margin-left: 10px;">(Floor: ${c.floor_id})</span>
+                <div class="floor-manage-row" style="align-items: flex-start; padding-top: 12px; padding-bottom: 12px;">
+                    <div class="floor-manage-name" style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <strong>${c.name}</strong> 
+                            <span style="font-size:11px; color: ${c.is_gatekeeper ? '#d97706' : '#2563eb'}; font-weight: bold; background: ${c.is_gatekeeper ? '#fef3c7' : '#dbeafe'}; padding: 2px 6px; border-radius: 4px;">
+                                ${c.is_gatekeeper ? 'GATEKEEPER' : 'TRACKER'}
+                            </span>
+                            <span style="font-size:11px; color: ${statusColor}; font-weight: bold; border: 1px solid ${statusColor}; padding: 2px 6px; border-radius: 4px;">
+                                ● ${c.status || 'Offline'}
+                            </span>
+                            <span style="font-size:13px; color:#666;">(Floor: ${c.floor_id})</span>
+                        </div>
+                        <div style="font-size: 12px; color: #6b7280; font-family: monospace; margin-top: 2px;">
+                            🔗 ${c.source}
+                        </div>
                     </div>
-                    <button class="btn-remove-floor" onclick="removeCamera('${c.name}')">Remove</button>
+                    <button class="btn-remove-floor" onclick="removeCamera('${c.name}')" style="margin-top: 2px;">Remove</button>
                 </div>
             `;
         }).join('');
@@ -441,6 +454,71 @@ function downloadWeekly() {
 function downloadMonthly() {
     alert("Monthly Summary coming soon.");
 }
+
+// --- LIVE DISPLAY BOARD ENGINE ---
+function updateDisplayBoard() {
+    // Only run this heavy UI update if the user is actually looking at the display page
+    const displayPage = document.getElementById('page-display');
+    if (!displayPage || !displayPage.classList.contains('active')) return;
+
+    Promise.all([
+        fetch('http://localhost:5000/api/floors').then(r => r.json()),
+        fetch('http://localhost:5000/api/status').then(r => r.json())
+    ])
+    .then(([floors, status]) => {
+        const board = document.getElementById('parkingDisplayBoard');
+        if (!board) return;
+
+        // Group floors by building
+        const buildings = {};
+        floors.forEach(f => {
+            if (!buildings[f.building]) buildings[f.building] = [];
+            buildings[f.building].push(f);
+        });
+
+        // 1. Grand Total Banner
+        const availabilityColor = status.available > 0 ? '#10b981' : '#ef4444';
+        let html = `
+            <div style="background: #1e293b; color: white; padding: 24px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h2 style="margin: 0 0 10px 0; font-size: 20px; color: #94a3b8; letter-spacing: 1px;">TOTAL CAMPUS AVAILABILITY</h2>
+                <div style="font-size: 56px; font-weight: 800; color: ${availabilityColor}; line-height: 1;">
+                    ${status.available} <span style="font-size: 24px; color: #cbd5e1; font-weight: 500;">/ ${status.max_slots} Spaces</span>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        `;
+
+        // 2. Individual Building Cards
+        for (const [buildingName, buildingFloors] of Object.entries(buildings)) {
+            html += `
+                <div style="flex: 1; min-width: 320px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0 0 15px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; color: #0f172a; font-size: 18px;">
+                        ${buildingName}
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+            `;
+
+            buildingFloors.forEach(f => {
+                const floorColor = f.available > 0 ? '#10b981' : '#ef4444';
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9;">
+                        <span style="font-size: 16px; font-weight: 600; color: #334155;">${f.name}</span>
+                        <div style="text-align: right;">
+                            <span style="font-size: 22px; font-weight: 800; color: ${floorColor};">${f.available}</span>
+                            <span style="font-size: 13px; font-weight: 500; color: #64748b; text-transform: uppercase;"> / ${f.capacity} open</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`; 
+        }
+        html += `</div>`; 
+        board.innerHTML = html;
+    })
+    .catch(err => console.error("Error updating display:", err));
+}
+
+setInterval(updateDisplayBoard, 3000);
 
 loadFloors().then(() => {
     loadCameras();
